@@ -236,6 +236,7 @@ except Exception as e:
     
     def delete_chunk(self, chunk_id: str) -> bool:
         """Delete a chunk from ChromaDB"""
+        print(f"[memory_adapter] DELETE_CHUNK requested: {chunk_id}", file=sys.stderr)
         workspace, vector_memory = _get_paths()
         venv_python = str(vector_memory / "venv/bin/python")
         
@@ -278,10 +279,14 @@ except Exception as e:
                 env=env
             )
             if result.returncode != 0:
+                print(f"[memory_adapter] DELETE_CHUNK completed: {chunk_id} deleted=False", file=sys.stderr)
                 return False
             data = json.loads(result.stdout)
-            return data.get("deleted", False)
+            deleted = data.get("deleted", False)
+            print(f"[memory_adapter] DELETE_CHUNK completed: {chunk_id} deleted={deleted}", file=sys.stderr)
+            return deleted
         except Exception:
+            print(f"[memory_adapter] DELETE_CHUNK completed: {chunk_id} deleted=False", file=sys.stderr)
             return False
     
     def reindex(self) -> dict:

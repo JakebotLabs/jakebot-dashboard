@@ -15,6 +15,13 @@ def _get_paths():
     return workspace, healthkit
 
 
+def _get_python_exec():
+    """Get python executable, preferring venv if available"""
+    _, healthkit = _get_paths()
+    venv_python = healthkit / "venv/bin/python"
+    return str(venv_python) if venv_python.exists() else sys.executable
+
+
 class HealthkitAdapter:
     """Adapter for healthkit_internal monitoring system"""
     
@@ -276,9 +283,10 @@ class HealthkitAdapter:
             return self.get_status()  # Fallback to cached
         
         try:
-            # Run monitor.py
+            # Run monitor.py with venv python if available
+            python_exec = _get_python_exec()
             result = subprocess.run(
-                [sys.executable, str(monitor_script)],
+                [python_exec, str(monitor_script)],
                 capture_output=True,
                 text=True,
                 timeout=60,
