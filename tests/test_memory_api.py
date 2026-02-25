@@ -215,56 +215,6 @@ async def test_health_monitors():
 
 @pytest.mark.asyncio
 async def test_delete_chunk():
-    """Test deleting a memory chunk"""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Delete a non-existent chunk (safe test)
-        resp = await ac.delete("/api/memory/chunk/nonexistent_chunk_12345")
-    
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "chunk_id" in data
-    assert "deleted" in data
-    assert data["chunk_id"] == "nonexistent_chunk_12345"
-    assert data["deleted"] is False  # Non-existent chunk should return deleted=False
-
-
-@pytest.mark.asyncio
-async def test_reindex():
-    """Test triggering memory reindex"""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.post("/api/memory/reindex")
-    
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "job_id" in data
-    assert "status" in data
-    assert "started_at" in data
-    assert "completed_at" in data
-    assert "chunks_indexed" in data
-    assert "error" in data
-    # Status should be 'complete' or 'failed' (not pending since it runs synchronously)
-    assert data["status"] in ["complete", "failed"]
-
-
-@pytest.mark.asyncio
-async def test_health_check_post():
-    """Test running a health check via POST"""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.post("/api/health/check")
-    
-    assert resp.status_code == 200
-    data = resp.json()
-    # Should return same structure as GET /health/status
-    assert "timestamp" in data
-    assert "mode" in data
-    assert "uptime_percent" in data
-    assert "metrics" in data
-    assert "services" in data
-    assert "issues" in data
-
-
-@pytest.mark.asyncio
-async def test_delete_chunk():
     """Test chunk deletion endpoint"""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         # Test successful delete (may or may not exist)
