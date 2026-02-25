@@ -30,6 +30,12 @@ app.add_middleware(
 # Auth middleware (disabled by default)
 app.add_middleware(AuthMiddleware)
 
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
+
 # API routers
 app.include_router(memory.router, prefix="/api")
 app.include_router(system.router, prefix="/api")
@@ -38,9 +44,3 @@ app.include_router(system.router, prefix="/api")
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists() and list(static_dir.glob("*")):
     app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
-
-
-@app.get("/health")
-async def health():
-    """Health check endpoint"""
-    return {"status": "healthy"}
