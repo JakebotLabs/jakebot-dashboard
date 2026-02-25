@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jakebot-dashboard"
+version = "0.1.0-alpha"
+description = "Jakebot Labs Dashboard - Memory & HealthKit Management"
+authors = [{name = "Jake Bennett", email = "jakebot2ops@gmail.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "click>=8.1.7",
+    "python-dotenv>=1.0.0",
+    "chromadb>=0.4.22",
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "httpx>=0.26.0"
+]
+
+[project.scripts]
+jakebot-dashboard = "backend.cli:cli"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
