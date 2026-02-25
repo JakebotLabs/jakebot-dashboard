@@ -131,3 +131,149 @@ async def test_auth_valid_token():
         # Restore original settings
         settings.auth_enabled = original_enabled
         settings.auth_token = original_token
+
+
+# Phase 2 tests
+
+@pytest.mark.asyncio
+async def test_memory_file_read():
+    """Test reading a file from workspace"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/memory/file?path=MEMORY.md")
+    
+    # May be 200 or 404 depending on whether MEMORY.md exists
+    assert resp.status_code in [200, 404]
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "path" in data
+        assert "content" in data
+        assert "size_bytes" in data
+
+
+@pytest.mark.asyncio
+async def test_memory_file_traversal():
+    """Test that path traversal is blocked"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/memory/file?path=../../../etc/passwd")
+    
+    # Should be 400 (bad request) for path traversal attempt
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_memory_graph():
+    """Test getting the knowledge graph"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/memory/graph")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "nodes" in data
+    assert "edges" in data
+    assert "data" in data
+
+
+@pytest.mark.asyncio
+async def test_health_status():
+    """Test health status endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/health/status")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "timestamp" in data
+    assert "mode" in data
+    assert "uptime_percent" in data
+    assert "metrics" in data
+    assert "services" in data
+    assert "issues" in data
+
+
+@pytest.mark.asyncio
+async def test_health_history():
+    """Test health history endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/health/history?hours=24")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "window" in data
+    assert "points" in data
+    assert isinstance(data["points"], list)
+
+
+@pytest.mark.asyncio
+async def test_health_monitors():
+    """Test health monitors listing endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/health/monitors")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+
+
+@pytest.mark.asyncio
+async def test_delete_chunk():
+    """Test chunk deletion endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Test successful delete (may or may not exist)
+        resp = await ac.delete("/api/memory/chunk/test-chunk-id-123")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "chunk_id" in data
+    assert "deleted" in data
+    assert data["chunk_id"] == "test-chunk-id-123"
+    assert isinstance(data["deleted"], bool)
+    
+    # Test non-existent chunk returns deleted=false
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.delete("/api/memory/chunk/nonexistent-chunk-99999")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["deleted"] == False
+
+
+@pytest.mark.asyncio
+async def test_reindex():
+    """Test memory reindex endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post("/api/memory/reindex")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "job_id" in data
+    assert "status" in data
+    assert "started_at" in data
+    assert "completed_at" in data
+    assert "chunks_indexed" in data
+    assert "error" in data
+    
+    # Validate status is one of expected values
+    assert data["status"] in ["running", "complete", "failed"]
+
+
+@pytest.mark.asyncio
+async def test_health_check_post():
+    """Test POST health check endpoint"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post("/api/health/check")
+    
+    assert resp.status_code == 200
+    data = resp.json()
+    
+    # Should return same structure as GET /health/status
+    assert "timestamp" in data
+    assert "mode" in data
+    assert "uptime_percent" in data
+    assert "metrics" in data
+    assert "services" in data
+    assert "issues" in data
+    
+    # Validate structure types
+    assert isinstance(data["uptime_percent"], (int, float))
+    assert isinstance(data["metrics"], dict)
+    assert isinstance(data["services"], list)
+    assert isinstance(data["issues"], list)

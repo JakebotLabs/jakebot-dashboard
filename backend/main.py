@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from .routers import memory, system
+from .routers import memory, system, health
 from .auth import AuthMiddleware
 
 app = FastAPI(
@@ -39,7 +39,7 @@ app.add_middleware(
 app.add_middleware(AuthMiddleware)
 
 @app.get("/health")
-async def health():
+async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
 
@@ -47,6 +47,7 @@ async def health():
 # API routers
 app.include_router(memory.router, prefix="/api")
 app.include_router(system.router, prefix="/api")
+app.include_router(health.router, prefix="/api")
 
 # Serve static frontend (if built)
 static_dir = Path(__file__).parent / "static"
