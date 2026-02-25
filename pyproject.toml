@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jakebot-dashboard"
-version = "0.1.0a1"
+version = "0.2.0a1"
 description = "Jakebot Labs Dashboard - Memory & HealthKit Management"
 authors = [{name = "Jake Bennett", email = "jakebot2ops@gmail.com"}]
 requires-python = ">=3.10"

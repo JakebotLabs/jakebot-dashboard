@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'preact/hooks'
 import { MemoryPanel } from './panels/MemoryPanel'
+import { HealthPanel } from './panels/HealthPanel'
 import { getSystemStatus, type SystemStatus } from './api'
 import './index.css'
 
@@ -60,7 +61,7 @@ export function App() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-6">
         {activeTab === 'memory' && <MemoryPanel />}
-        {activeTab === 'health' && <HealthPlaceholder />}
+        {activeTab === 'health' && <HealthPanel />}
       </main>
     </div>
   )
@@ -92,11 +93,4 @@ function TabButton({
   )
 }
 
-function HealthPlaceholder() {
-  return (
-    <div className="bg-gh-card border border-gh-border rounded-lg p-8 text-center">
-      <h2 className="text-xl font-semibold mb-2">Health Monitoring</h2>
-      <p className="text-gh-text-muted">Coming in Week 2</p>
-    </div>
-  )
-}
+

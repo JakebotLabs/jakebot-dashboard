@@ -29,7 +29,7 @@ async def get_system_status():
     hk_status = "ready" if hk_installed else "not_installed"
     
     return {
-        "dashboard_version": "0.1.0a1",
+        "dashboard_version": "0.2.0a1",
         "products": {
             "persistent_memory": {
                 "installed": pm_installed,
