@@ -2,7 +2,19 @@
  * API client for Jakebot Dashboard
  */
 
-const BASE = 'http://localhost:7842/api'
+const BASE = `${window.location.protocol}//${window.location.host}/api`
+
+let authToken: string | null = null
+
+export function setAuthToken(token: string) {
+  authToken = token
+}
+
+function headers(): HeadersInit {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (authToken) h['Authorization'] = `Bearer ${authToken}`
+  return h
+}
 
 export interface SearchResult {
   chunk_id: string
@@ -47,25 +59,33 @@ export interface SystemStatus {
 }
 
 export async function searchMemory(query: string, n = 5): Promise<SearchResponse> {
-  const res = await fetch(`${BASE}/memory/search?q=${encodeURIComponent(query)}&n=${n}`)
+  const res = await fetch(`${BASE}/memory/search?q=${encodeURIComponent(query)}&n=${n}`, {
+    headers: headers()
+  })
   if (!res.ok) throw new Error(`Search failed: ${res.statusText}`)
   return res.json()
 }
 
 export async function getMemoryStatus(): Promise<MemoryStatus> {
-  const res = await fetch(`${BASE}/memory/status`)
+  const res = await fetch(`${BASE}/memory/status`, {
+    headers: headers()
+  })
   if (!res.ok) throw new Error(`Status fetch failed: ${res.statusText}`)
   return res.json()
 }
 
 export async function listFiles(): Promise<string[]> {
-  const res = await fetch(`${BASE}/memory/files`)
+  const res = await fetch(`${BASE}/memory/files`, {
+    headers: headers()
+  })
   if (!res.ok) throw new Error(`File list failed: ${res.statusText}`)
   return res.json()
 }
 
 export async function getSystemStatus(): Promise<SystemStatus> {
-  const res = await fetch(`${BASE}/system/status`)
+  const res = await fetch(`${BASE}/system/status`, {
+    headers: headers()
+  })
   if (!res.ok) throw new Error(`System status failed: ${res.statusText}`)
   return res.json()
 }

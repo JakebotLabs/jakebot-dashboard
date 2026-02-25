@@ -1,4 +1,5 @@
 """Authentication middleware for Jakebot Dashboard"""
+import secrets
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from .config import settings
@@ -25,7 +26,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
         
         token = auth_header.replace("Bearer ", "")
-        if token != settings.auth_token:
+        if not secrets.compare_digest(token, settings.auth_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication token"

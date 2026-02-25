@@ -1,4 +1,5 @@
 """Configuration management for Jakebot Dashboard"""
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,9 +9,9 @@ class Settings(BaseSettings):
     port: int = 7842
     auth_enabled: bool = False
     auth_token: str = ""
-    workspace_path: str = "/home/jakebot/.openclaw/workspace"
-    vector_memory_path: str = "/home/jakebot/.openclaw/workspace/vector_memory"
-    healthkit_path: str = "/home/jakebot/.openclaw/workspace/healthkit_internal"
+    workspace_path: str = str(Path.home() / ".openclaw/workspace")
+    vector_memory_path: str = str(Path.home() / ".openclaw/workspace/vector_memory")
+    healthkit_path: str = str(Path.home() / ".openclaw/workspace/healthkit_internal")
     
     model_config = SettingsConfigDict(env_prefix="JAKEBOT_DASHBOARD_")
 

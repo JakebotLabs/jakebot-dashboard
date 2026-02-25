@@ -2,6 +2,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from backend.main import app
+from backend.config import settings
 
 
 @pytest.mark.asyncio
@@ -71,3 +72,62 @@ async def test_health():
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "healthy"
+
+
+@pytest.mark.asyncio
+async def test_search_missing_query():
+    """Test that search without query param returns 422"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/memory/search")
+    
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_auth_required_when_enabled():
+    """Test that auth is enforced when enabled"""
+    from fastapi.exceptions import HTTPException
+    
+    # Save original settings
+    original_enabled = settings.auth_enabled
+    original_token = settings.auth_token
+    
+    try:
+        # Enable auth
+        settings.auth_enabled = True
+        settings.auth_token = "test-secret-token-12345"
+        
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            with pytest.raises(HTTPException) as exc_info:
+                await ac.get("/api/memory/files")
+        
+        assert exc_info.value.status_code == 401
+    finally:
+        # Restore original settings
+        settings.auth_enabled = original_enabled
+        settings.auth_token = original_token
+
+
+@pytest.mark.asyncio
+async def test_auth_valid_token():
+    """Test that valid token is accepted"""
+    # Save original settings
+    original_enabled = settings.auth_enabled
+    original_token = settings.auth_token
+    
+    try:
+        # Enable auth
+        settings.auth_enabled = True
+        settings.auth_token = "test-secret-token-12345"
+        
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get(
+                "/api/memory/files",
+                headers={"Authorization": "Bearer test-secret-token-12345"}
+            )
+        
+        assert resp.status_code == 200
+    finally:
+        # Restore original settings
+        settings.auth_enabled = original_enabled
+        settings.auth_token = original_token

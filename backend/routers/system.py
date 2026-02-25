@@ -3,6 +3,7 @@ import sys
 import platform
 from pathlib import Path
 from fastapi import APIRouter
+from ..config import settings
 
 router = APIRouter(tags=["system"])
 
@@ -10,9 +11,9 @@ router = APIRouter(tags=["system"])
 @router.get("/system/status")
 async def get_system_status():
     """Get system and product status"""
-    workspace = Path("/home/jakebot/.openclaw/workspace")
-    vector_memory_path = workspace / "vector_memory"
-    healthkit_path = workspace / "healthkit_internal"
+    workspace = Path(settings.workspace_path).expanduser()
+    vector_memory_path = Path(settings.vector_memory_path).expanduser()
+    healthkit_path = Path(settings.healthkit_path).expanduser()
     
     # Check persistent_memory
     pm_installed = vector_memory_path.exists() and (vector_memory_path / "venv").exists()
@@ -28,7 +29,7 @@ async def get_system_status():
     hk_status = "ready" if hk_installed else "not_installed"
     
     return {
-        "dashboard_version": "0.1.0-alpha",
+        "dashboard_version": "0.1.0a1",
         "products": {
             "persistent_memory": {
                 "installed": pm_installed,

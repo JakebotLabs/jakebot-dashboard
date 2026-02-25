@@ -2,13 +2,17 @@
 import subprocess
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime
+from ..config import settings
 
 
-WORKSPACE = Path("/home/jakebot/.openclaw/workspace")
-VECTOR_MEMORY = WORKSPACE / "vector_memory"
-VENV_PYTHON = str(VECTOR_MEMORY / "venv/bin/python")
+def _get_paths():
+    """Get workspace and vector memory paths from settings"""
+    workspace = Path(settings.workspace_path).expanduser()
+    vector_memory = Path(settings.vector_memory_path).expanduser()
+    return workspace, vector_memory
 
 
 class MemoryAdapter:
@@ -20,18 +24,23 @@ class MemoryAdapter:
     
     def _chromadb_search(self, query: str, n: int) -> list[dict]:
         """Execute chromadb search via subprocess"""
-        # Escape single quotes in query
-        escaped_query = query.replace("'", "\\'")
+        workspace, vector_memory = _get_paths()
+        venv_python = str(vector_memory / "venv/bin/python")
         
+        # Build script with NO user input interpolated - use env vars
         script = f"""
 import sys
-sys.path.insert(0, '{VECTOR_MEMORY}')
+import os
+sys.path.insert(0, '{vector_memory}')
 import chromadb
 from sentence_transformers import SentenceTransformer
 import json
 
 try:
-    client = chromadb.PersistentClient(path='{VECTOR_MEMORY}/chroma_db')
+    query = os.environ["SEARCH_QUERY"]
+    n_results = int(os.environ.get("SEARCH_N", "5"))
+    
+    client = chromadb.PersistentClient(path='{vector_memory}/chroma_db')
     collections = client.list_collections()
     if not collections:
         print(json.dumps([]))
@@ -39,10 +48,10 @@ try:
     
     collection = collections[0]
     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-    embedding = model.encode(['{escaped_query}']).tolist()
+    embedding = model.encode([query]).tolist()
     results = collection.query(
         query_embeddings=embedding,
-        n_results={n},
+        n_results=n_results,
         include=['documents', 'metadatas', 'distances']
     )
     
@@ -63,36 +72,48 @@ except Exception as e:
     print(json.dumps([]))
 """
         try:
+            # Pass user input via environment variables
+            env = {**os.environ, "SEARCH_QUERY": query, "SEARCH_N": str(n)}
             result = subprocess.run(
-                [VENV_PYTHON, '-c', script],
+                [venv_python, '-c', script],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                env=env
             )
+            if result.stderr:
+                print(f"[memory_adapter] stderr: {result.stderr[:300]}", file=sys.stderr)
             if result.returncode != 0:
-                return []
+                return [{"error": "subprocess_failed", "detail": result.stderr[:200] if result.stderr else "unknown"}]
             return json.loads(result.stdout)
-        except Exception:
-            return []
+        except subprocess.TimeoutExpired:
+            return [{"error": "timeout", "detail": "Search timed out after 30s"}]
+        except json.JSONDecodeError as e:
+            return [{"error": "parse_failed", "detail": str(e)}]
+        except Exception as e:
+            return [{"error": "exception", "detail": str(e)}]
     
     def get_status(self) -> dict:
         """Get memory system status"""
+        workspace, vector_memory = _get_paths()
+        venv_python = str(vector_memory / "venv/bin/python")
+        
         script = f"""
 import sys
 import json
-sys.path.insert(0, '{VECTOR_MEMORY}')
+sys.path.insert(0, '{vector_memory}')
 import chromadb
 import os
 
 try:
-    client = chromadb.PersistentClient(path='{VECTOR_MEMORY}/chroma_db')
+    client = chromadb.PersistentClient(path='{vector_memory}/chroma_db')
     collections = client.list_collections()
     chunk_count = 0
     if collections:
         chunk_count = collections[0].count()
     
     # Try graph
-    graph_path = '{VECTOR_MEMORY}/memory_graph.json'
+    graph_path = '{vector_memory}/memory_graph.json'
     nodes, edges = 0, 0
     if os.path.exists(graph_path):
         with open(graph_path) as f:
@@ -106,11 +127,13 @@ except Exception as e:
 """
         try:
             result = subprocess.run(
-                [VENV_PYTHON, '-c', script],
+                [venv_python, '-c', script],
                 capture_output=True,
                 text=True,
                 timeout=15
             )
+            if result.stderr:
+                print(f"[memory_adapter] stderr: {result.stderr[:300]}", file=sys.stderr)
             if result.returncode != 0:
                 return {'chunks': 0, 'nodes': 0, 'edges': 0}
             return json.loads(result.stdout)
@@ -119,23 +142,29 @@ except Exception as e:
     
     def list_files(self) -> list[str]:
         """List indexed markdown files in workspace"""
+        workspace, _ = _get_paths()
         files = []
         patterns = ['*.md', 'memory/*.md', 'reference/*.md', 'skills/*/*.md']
         for pattern in patterns:
-            for p in WORKSPACE.glob(pattern):
+            for p in workspace.glob(pattern):
                 if p.is_file():
-                    files.append(str(p.relative_to(WORKSPACE)))
+                    files.append(str(p.relative_to(workspace)))
         return sorted(set(files))
     
     def get_last_sync(self) -> tuple[str, str]:
         """Get last sync timestamp from auto_retrieve.py status"""
+        workspace, vector_memory = _get_paths()
+        venv_python = str(vector_memory / "venv/bin/python")
+        
         try:
             result = subprocess.run(
-                [VENV_PYTHON, str(VECTOR_MEMORY / "auto_retrieve.py"), "--status"],
+                [venv_python, str(vector_memory / "auto_retrieve.py"), "--status"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
+            if result.stderr:
+                print(f"[memory_adapter] stderr: {result.stderr[:300]}", file=sys.stderr)
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
                     if 'Last sync:' in line:
@@ -164,7 +193,8 @@ except Exception as e:
     def get_db_size(self) -> float:
         """Get ChromaDB size in MB"""
         try:
-            db_path = VECTOR_MEMORY / "chroma_db"
+            _, vector_memory = _get_paths()
+            db_path = vector_memory / "chroma_db"
             if not db_path.exists():
                 return 0.0
             

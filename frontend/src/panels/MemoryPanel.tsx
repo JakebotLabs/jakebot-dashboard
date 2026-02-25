@@ -1,7 +1,7 @@
 /**
  * Memory Panel - Search and browse vector memory
  */
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useCallback } from 'preact/hooks'
 import { searchMemory, getMemoryStatus, listFiles, type SearchResult, type MemoryStatus } from '../api'
 
 export function MemoryPanel() {
@@ -11,6 +11,20 @@ export function MemoryPanel() {
   const [files, setFiles] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTime, setSearchTime] = useState(0)
+
+  const performSearch = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await searchMemory(query, 5)
+      setResults(response.results)
+      setSearchTime(response.took_ms)
+    } catch (err) {
+      console.error('Search failed:', err)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }, [query])
 
   // Load status and files on mount
   useEffect(() => {
@@ -30,7 +44,7 @@ export function MemoryPanel() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, performSearch])
 
   async function loadStatus() {
     try {
@@ -47,20 +61,6 @@ export function MemoryPanel() {
       setFiles(f)
     } catch (err) {
       console.error('Failed to load files:', err)
-    }
-  }
-
-  async function performSearch() {
-    setLoading(true)
-    try {
-      const response = await searchMemory(query, 5)
-      setResults(response.results)
-      setSearchTime(response.took_ms)
-    } catch (err) {
-      console.error('Search failed:', err)
-      setResults([])
-    } finally {
-      setLoading(false)
     }
   }
 
