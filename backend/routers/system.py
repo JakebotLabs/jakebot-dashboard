@@ -28,8 +28,9 @@ async def get_system_status():
     hk_installed = healthkit_path.exists()
     hk_status = "ready" if hk_installed else "not_installed"
     
+    from .. import __version__
     return {
-        "dashboard_version": "0.2.0a1",
+        "dashboard_version": __version__,
         "products": {
             "persistent_memory": {
                 "installed": pm_installed,

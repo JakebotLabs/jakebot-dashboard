@@ -16,9 +16,15 @@ def _get_paths():
 
 
 def _get_python_exec():
-    """Get python executable, preferring venv if available"""
+    """Get python executable, preferring venv if available.
+
+    On Windows the venv layout is Scripts/python.exe, on Unix it's bin/python.
+    """
     _, healthkit = _get_paths()
-    venv_python = healthkit / "venv/bin/python"
+    if sys.platform == "win32":
+        venv_python = healthkit / "venv" / "Scripts" / "python.exe"
+    else:
+        venv_python = healthkit / "venv" / "bin" / "python"
     return str(venv_python) if venv_python.exists() else sys.executable
 
 

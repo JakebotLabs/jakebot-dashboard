@@ -7,9 +7,11 @@ from pathlib import Path
 from .routers import memory, system, health
 from .auth import AuthMiddleware
 
+from . import __version__
+
 app = FastAPI(
     title="Jakebot Labs Dashboard",
-    version="0.1.0a1",
+    version=__version__,
     description="Memory & HealthKit Management Dashboard"
 )
 
