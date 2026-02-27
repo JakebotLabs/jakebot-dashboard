@@ -15,6 +15,16 @@ def _get_paths():
     return workspace, vector_memory
 
 
+def _get_venv_python(base_path: Path) -> str:
+    """Return the venv Python path for the given base directory.
+
+    On Windows the venv layout is Scripts/python.exe, on Unix it's bin/python.
+    """
+    if sys.platform == "win32":
+        return str(base_path / "venv" / "Scripts" / "python.exe")
+    return str(base_path / "venv" / "bin" / "python")
+
+
 class MemoryAdapter:
     """Adapter for vector_memory system"""
     
@@ -25,7 +35,7 @@ class MemoryAdapter:
     def _chromadb_search(self, query: str, n: int) -> list[dict]:
         """Execute chromadb search via subprocess"""
         workspace, vector_memory = _get_paths()
-        venv_python = str(vector_memory / "venv/bin/python")
+        venv_python = _get_venv_python(vector_memory)
         
         # Build script with NO user input interpolated - use env vars
         script = f"""
@@ -96,7 +106,7 @@ except Exception as e:
     def get_status(self) -> dict:
         """Get memory system status"""
         workspace, vector_memory = _get_paths()
-        venv_python = str(vector_memory / "venv/bin/python")
+        venv_python = _get_venv_python(vector_memory)
         
         script = f"""
 import sys
@@ -154,7 +164,7 @@ except Exception as e:
     def get_last_sync(self) -> tuple[str, str]:
         """Get last sync timestamp from auto_retrieve.py status"""
         workspace, vector_memory = _get_paths()
-        venv_python = str(vector_memory / "venv/bin/python")
+        venv_python = _get_venv_python(vector_memory)
         
         try:
             result = subprocess.run(
@@ -238,7 +248,7 @@ except Exception as e:
         """Delete a chunk from ChromaDB"""
         print(f"[memory_adapter] DELETE_CHUNK requested: {chunk_id}", file=sys.stderr)
         workspace, vector_memory = _get_paths()
-        venv_python = str(vector_memory / "venv/bin/python")
+        venv_python = _get_venv_python(vector_memory)
         
         script = f"""
 import sys
@@ -293,7 +303,7 @@ except Exception as e:
         """Run the vector memory indexer"""
         import time
         workspace, vector_memory = _get_paths()
-        venv_python = str(vector_memory / "venv/bin/python")
+        venv_python = _get_venv_python(vector_memory)
         indexer_path = vector_memory / "indexer.py"
         
         job_id = f"reindex_{int(time.time())}"
